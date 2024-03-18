@@ -97,7 +97,7 @@ int main()
 
     std::thread t1([&list] {
         std::tm birthDate = { 0,0,0,15,3,1995 };
-        my data1 = my("‰““¡", birthDate);
+        my data1 = my("–{“c", birthDate);
         list.add_value(data1);
     });
 
