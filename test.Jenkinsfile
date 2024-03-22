@@ -4,6 +4,7 @@ pipeline { // Declarative pipelineであることを宣言する
       stage("build"){
           steps{
             echo "Start build!"
+            build job: 'testjob', parameters: [text(name: 'payload', value: '')]
           }
           //ステップ終了処理
           post{
