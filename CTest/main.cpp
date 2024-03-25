@@ -184,6 +184,7 @@ int main()
             const std::string outLogDir = "C:\\outputLog";
             std::string filePath;
             std::vector<std::string> v;
+            std::string msg;
             // 新しいスレッドで実行される処理
             while (!processEnd)
             {
@@ -198,28 +199,34 @@ int main()
                         v = q.back().second;
                         //thTest.add_value(v);
                         q.pop_back();
-                        safe_print(std::format("【スレッド{0}】値[ {1} ]がキューから取り出されました。(現在のキュー個数={2})", id, filePath, q.size()));
+                        safe_print(std::format("【スレッド{0}】ファイル[ {1} ]の処理が開始されました。", id, filePath));
                     }
                     else
                     {
                         continue;
                     }
                 }
-
                 const std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
-                std::time_t end_time = std::chrono::system_clock::to_time_t(now);
-                tm* nowDate = std::gmtime(&end_time);
-                const std::string nowDateStr;
+                const std::chrono::system_clock::duration duration = now.time_since_epoch();
+                const long long ms = std::chrono::duration_cast<std::chrono::milliseconds>(duration).count();
+                const long long sec = ms / 1000;
+                tm* nowDate = std::localtime(&sec);
+                std::string nowDateStr;
                 std::stringstream ss;
                 ss << std::setw(4) << std::setfill('0') << nowDate->tm_year + 1900 <<
                     std::setw(2) << std::setfill('0') << nowDate->tm_mon + 1 <<
                     std::setw(2) << std::setfill('0') << nowDate->tm_mday <<
                     std::setw(2) << std::setfill('0') << nowDate->tm_hour <<
                     std::setw(2) << std::setfill('0') << nowDate->tm_min <<
-                    std::setw(2) << std::setfill('0') << nowDate->tm_sec;
+                    std::setw(2) << std::setfill('0') << nowDate->tm_sec <<
+                    std::setw(3) << std::setfill('0') << ms % 1000;
+
+                nowDateStr = ss.str();
 
                 //thTest.add_value(v);
-                std::ofstream iof(outLogDir + "\\" + filePath.substr(filePath.find_last_of("\\") + 1));
+                std::ofstream iof(outLogDir + "\\" + filePath.substr(filePath.find_last_of("\\") + 1) + "_" + nowDateStr + ".log");
+
+                iof << std::format("検索文字列 [ {0} ]", searchWord) << std::endl;
 
                 int foundCnt = 0;
                 int rowNumber = 1;
@@ -229,7 +236,9 @@ int main()
                     do{
                         foundIdx = buf.find(searchWord, foundIdx);
                         if (foundIdx != std::string::npos) {
-                            safe_print(std::format("【スレッド{0}】{1}行目{2}列目で文字列[ {3} ]がヒットしました。", id, rowNumber, foundIdx + 1, searchWord));
+                            msg = std::format("{0}行目{1}列目でヒットしました。", rowNumber, foundIdx + 1);
+                            iof << msg << std::endl;
+                            //safe_print(std::format("【スレッド{0}】", id) + msg);
                             foundCntRow++;
                             foundIdx += searchWord.length();
                         }
@@ -239,11 +248,16 @@ int main()
                 }
                     
                 if (foundCnt > 0) {
-                    safe_print(std::format("【スレッド{0}】文字列[ {1} ]は全部で{2}個見つかりました。", id, searchWord, foundCnt));
+                    msg = std::format("文字列[ {0} ]は全部で{1}個見つかりました。", searchWord, foundCnt);
+                    iof << msg << std::endl;
+                    //safe_print(std::format("【スレッド{0}】", id) + msg);
                 }
                 else {
-                    safe_print(std::format("【スレッド{0}】文字列[ {1} ]は見つかりませんでした。", id, searchWord));
+                    msg = std::format("文字列[ {0} ]は見つかりませんでした。", searchWord);
+                    iof << msg << std::endl;
+                    //safe_print(std::format("【スレッド{0}】", id) + msg);
                 }
+                safe_print(std::format("【スレッド{0}】ファイル[ {1} ]の処理完了しました", id, filePath));
             }
         });
     }
@@ -281,11 +295,11 @@ int main()
             std::ifstream ifs(filePath);
 
             if (ifs.fail()) {
-               safe_print(std::format("ファイルオープンエラー [ {0} ]", filePath));
+               safe_print(std::format("ファイルオープンエラーです。 [ {0} ]", filePath));
                continue;
             }
             else {
-                safe_print(std::format("ファイルオープン [ {0} ]", filePath));
+                safe_print(std::format("ファイルオープンしました。 [ {0} ]", filePath));
                 {
                     std::unique_lock<std::mutex> uniq_lk(que_mtx_); // ここでロックされる
                     q.push_back(std::pair<std::string, std::vector<std::string>>(filePath, std::vector<std::string>()));
@@ -296,7 +310,7 @@ int main()
                         q.back().second.push_back(buf);
                     }
                 }
-                safe_print(std::format("値[ {0} ]がキューに追加されました。(現在のキュー個数={1})", filePath, q.size()));
+                safe_print(std::format("ファイル[ {0} ]の読み込みが完了しました。", filePath));
 
                 ifs.close();
                 //std::filesystem::rename(filePath, std::format("{0}\\{1}", moveToDir, fileName));
